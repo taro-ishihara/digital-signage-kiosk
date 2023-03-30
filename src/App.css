@@ -1,0 +1,18 @@
+.App {
+  background: #202020;
+  overflow: hidden;
+  height: 100vh;
+  width: 100vw;
+}
+
+img {
+  height: 100%;
+  width: 100%;
+  object-fit: contain;
+}
+
+video {
+  height: 100%;
+  width: 100%;
+  object-fit: contain;
+}
