@@ -1,46 +1,68 @@
-import { useState, useReducer } from "react";
+import { useState, useReducer, useEffect } from "react";
 
-import Image from "./Image.js";
-import Video from "./Video.js";
 import React from "react";
 import { useContents } from "../context/ContentsContext";
 
 const ContentsManager = () => {
   const contents = useContents();
-  const [forceFlipToggle, setForceFlipToggle] = useState(false);
-
+  const [loop, setLoop] = useState(false);
   const [index, dispatch] = useReducer((index, action) => {
     switch (action.type) {
       case "index/next":
-        if (contents.length < 2) {
-          setForceFlipToggle(!forceFlipToggle);
+        if (contents.length === 1) {
+          setLoop(true);
           return 0;
         }
         if (index < contents.length - 1) {
           return index + 1;
-        } else {
-          return 0;
         }
+        return 0;
       default:
         return index;
     }
   }, 0);
 
-  return contents.length === 0 ? (
-    <img src="default.png" alt="" />
-  ) : contents[index].contentType.startsWith("image") ? (
-    <Image
-      {...contents[index]}
-      dispatch={dispatch}
-      forceFlipToggle={forceFlipToggle}
-    />
-  ) : (
-    <Video
-      {...contents[index]}
-      dispatch={dispatch}
-      forceFlipToggle={forceFlipToggle}
-    />
-  );
+  useEffect(() => {
+    let duration = 1_000;
+    if (contents.length > index) {
+      duration = contents[index].duration;
+    }
+    const id = window.setTimeout(() => {
+      dispatch({ type: "index/next" });
+    }, duration);
+
+    return () => {
+      clearTimeout(id);
+    };
+  }, [contents, index]);
+
+  const displayContent = () => {
+    if (contents.length <= index) {
+      return <img src="default.png" alt="" />;
+    }
+    switch (contents[index].contentType.split("/")[0]) {
+      case "image":
+        return (
+          <img
+            src={contents[index].objectUrl}
+            alt={contents[index].downloadUrl}
+          />
+        );
+      case "video":
+        return (
+          <video
+            src={contents[index].objectUrl}
+            alt={contents[index].downloadUrl}
+            autoPlay
+            loop={loop}
+          />
+        );
+      default:
+        return <img src="default.png" alt="" />;
+    }
+  };
+
+  return displayContent();
 };
 
 export default ContentsManager;
