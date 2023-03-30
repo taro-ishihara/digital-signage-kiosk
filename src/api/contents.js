@@ -1,18 +1,17 @@
-const CONTENTS_FOLDER = process.env.REACT_APP_CONTENTS_FOLDER;
-const API_ENDPOINT_URL =
-  process.env.REACT_APP_LIST_CONTENTS_API_ENDPOINT + "/dev/";
-const STORAGE_URL = process.env.REACT_APP_CONTENTS_BUCKET_URL;
+const PREFIX = process.env.REACT_APP_PREFIX;
+const APIGW_URL = process.env.REACT_APP_APIGW_URL;
 
 const contentsApi = {
   async listContents() {
-    const result = await fetch(API_ENDPOINT_URL + `?prefix=${CONTENTS_FOLDER}`);
+    const result = await fetch(APIGW_URL + `?prefix=${PREFIX}`);
     const jsonData = await result.json();
     return jsonData;
   },
-  async getContent(filePath) {
-    const response = await fetch(`${STORAGE_URL}/${filePath}`);
+  async getContent(downloadUrl) {
+    const response = await fetch(downloadUrl);
+    // const contentType = response.headers.get('Content-Type')
     const blobData = await response.blob();
-    return blobData;
+    return blobData
   },
 };
 

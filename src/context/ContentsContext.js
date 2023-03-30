@@ -10,17 +10,13 @@ const serverContentList = [];
 const localContentsReducer = (localContentList, action) => {
   switch (action.type) {
     case "localContent/create":
-      const objectUrl = window.URL.createObjectURL(action.payload.blobData);
       const newLocalContent = {
-        filePath: action.payload.filePath,
-        objectUrl: objectUrl,
-        etag: action.payload.etag,
-        duration: 5_000,
+        ...action.payload,
       };
       return [...localContentList, newLocalContent];
     case "localContent/delete":
       return localContentList.filter((localContent) => {
-        if (localContent.filePath !== action.payload) {
+        if (localContent.downloadUrl !== action.payload) {
           return true;
         } else {
           window.URL.revokeObjectURL(localContent.objectUrl);
@@ -70,7 +66,7 @@ const localContentsRefresh = (serverContents, localContents, dispatch) => {
       return (
         -1 ===
         serverContents.findIndex(
-          (sc) => sc.filePath === lc.filePath && sc.etag === lc.etag
+          (sc) => sc.downloadUrl === lc.downloadUrl && sc.etag === lc.etag
         )
       );
     })
@@ -78,7 +74,7 @@ const localContentsRefresh = (serverContents, localContents, dispatch) => {
       console.log("delete start", target.etag);
       dispatch({
         type: "localContent/delete",
-        payload: target.filePath,
+        payload: target.downloadUrl,
       });
     });
 
@@ -88,22 +84,38 @@ const localContentsRefresh = (serverContents, localContents, dispatch) => {
       return (
         -1 ===
         localContents.findIndex(
-          (lc) => sc.filePath === lc.filePath && sc.etag === lc.etag
+          (lc) => sc.downloadUrl === lc.downloadUrl && sc.etag === lc.etag
         )
       );
     })
     .forEach((target) => {
       console.log("download start", target.etag);
-      contentsApi.getContent(target.filePath).then((blobData) => {
+      (async () => {
+        const blobData = await contentsApi.getContent(target.downloadUrl);
+        const objectUrl = window.URL.createObjectURL(blobData);
+        let duration = 5_000;
+        if (blobData.type.startsWith("video")) {
+          duration = await (() => {
+            return new Promise((resolve) => {
+              const video = document.createElement("video");
+              video.onloadedmetadata = () =>
+                resolve(Math.round(video.duration * 1000));
+              video.src = objectUrl;
+            });
+          })();
+        }
         dispatch({
           type: "localContent/create",
           payload: {
-            filePath: target.filePath,
+            objectUrl: objectUrl,
+            duration: duration,
             blobData: blobData,
+            contentType: blobData.type,
+            downloadUrl: target.downloadUrl,
             etag: target.etag,
-          }
+          },
         });
-      });
+      })();
     });
 };
 
